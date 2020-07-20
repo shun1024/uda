@@ -39,11 +39,33 @@ python preprocess.py \
 # Preprocess unlabeled set
 python preprocess.py \
   --raw_data_dir=data/IMDB_raw/csv \
-  --output_base_dir=data/proc_data/IMDB/unsup \
+  --output_base_dir=data/proc_data/IMDB/unsup/bt \
   --back_translation_dir=data/back_translation/imdb_back_trans \
   --data_type=unsup \
   --sub_set=unsup_in \
   --aug_ops=bt-0.9 \
+  --aug_copy_num=0 \
+  --vocab_file=$bert_vocab_file \
+  $@
+
+# Preprocess unlabeled set
+python preprocess.py \
+  --raw_data_dir=data/IMDB_raw/csv \
+  --output_base_dir=data/proc_data/IMDB/unsup/unif \
+  --data_type=unsup \
+  --sub_set=unsup_in \
+  --aug_ops=unif-0.15 \
+  --aug_copy_num=0 \
+  --vocab_file=$bert_vocab_file \
+  $@
+
+# Preprocess unlabeled set
+python preprocess.py \
+  --raw_data_dir=data/IMDB_raw/csv \
+  --output_base_dir=data/proc_data/IMDB/unsup/maskf \
+  --data_type=unsup \
+  --sub_set=unsup_in \
+  --aug_ops=maskf-0.15 \
   --aug_copy_num=0 \
   --vocab_file=$bert_vocab_file \
   $@

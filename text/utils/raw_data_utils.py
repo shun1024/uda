@@ -346,25 +346,54 @@ class SSTProcessor(DataProcessor):
     def get_train_examples(self, raw_data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(raw_data_dir, "train.csv"),
+            self._read_tsv(os.path.join(raw_data_dir, "train.tsv"),
                            quotechar='"'), "train")
 
     def get_dev_examples(self, raw_data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(raw_data_dir, "test.csv"),
+            self._read_tsv(os.path.join(raw_data_dir, "dev.tsv"),
                            quotechar='"'), "test")
 
     def get_unsup_examples(self, raw_data_dir, unsup_set):
         """See base class."""
-        lines = self._read_tsv(os.path.join(raw_data_dir, "train.csv"),
+        lines = self._read_tsv(os.path.join(raw_data_dir, "train.tsv"),
                                quotechar='"')
         new_lines = []
         for line in lines:
-            tmp = line + ['unsup', 'none']
-            if len(tmp) > 2:
-                new_lines.append(tmp)
+            new_lines.append(line + ['unsup'])
         return self._create_examples(new_lines, unsup_set, skip_unsup=False)
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type, skip_unsup=True):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:  # skip the title
+                continue
+
+            if skip_unsup and line[1] == "unsup":
+                continue
+            guid = "%s-%s" % (set_type, i)
+            text_a = line[0]
+            label = line[1]
+            text_a = clean_web_text(text_a)
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+    def get_train_size(self):
+        return 65000
+
+    def get_dev_size(self):
+        return 800
+
+
+class CoLAProcessor(SSTProcessor):
+    """Processor for the CoLA data set (GLUE version)."""
 
     def get_labels(self):
         """See base class."""
@@ -376,8 +405,12 @@ class SSTProcessor(DataProcessor):
         for (i, line) in enumerate(lines):
             if skip_unsup and line[1] == "unsup":
                 continue
-            guid = "%s-%s" % (set_type, line[2])
-            text_a = line[0]
+            guid = "%s-%s" % (set_type, i)
+
+            if line[1] == "unsup":
+                text_a = line[0]
+            else:
+                text_a = line[-1]
             label = line[1]
             text_a = clean_web_text(text_a)
             examples.append(
@@ -385,10 +418,10 @@ class SSTProcessor(DataProcessor):
         return examples
 
     def get_train_size(self):
-        return 25000
+        return 8000
 
     def get_dev_size(self):
-        return 25000
+        return 1000
 
 
 def get_processor(task_name):
@@ -401,7 +434,8 @@ def get_processor(task_name):
         "yelp-5": YELP5Processor,
         "amazon-2": AMAZON2Processor,
         "amazon-5": AMAZON5Processor,
-        "sst": SSTProcessor,
+        "sst-2": SSTProcessor,
+        "cola": CoLAProcessor
     }
     processor = processors[task_name]()
     return processor

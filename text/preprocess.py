@@ -493,10 +493,11 @@ def proc_and_save_unsup_data(
         aug_copy_num,
         start, end, data_total_size)
 
+    min_length_text = 10
     delete_count = 0
     for i in range(len(ori_examples)):
         index = i - delete_count
-        if len(ori_examples[index].text_a) < 100:
+        if len(ori_examples[index].text_a) < min_length_text:
             delete_count += 1
             del ori_examples[index]
             del aug_examples[index]

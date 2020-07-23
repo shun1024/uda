@@ -406,12 +406,40 @@ class CoLAProcessor(SSTProcessor):
             if skip_unsup and line[1] == "unsup":
                 continue
             guid = "%s-%s" % (set_type, i)
-
-            if line[1] == "unsup":
-                text_a = line[0]
+            if line[-1] == "unsup":
+                text_a = line[-2]
             else:
                 text_a = line[-1]
             label = line[1]
+            text_a = clean_web_text(text_a)
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+    def get_train_size(self):
+        return 8000
+
+    def get_dev_size(self):
+        return 1000
+
+
+class WikiProcessor(TextClassProcessor):
+    """Processor for the CoLA data set (GLUE version)."""
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type, skip_unsup=True):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s" % (set_type, i)
+            text_a = line[0].split('.')
+            # fix max length for speedup
+            length = min(len(text_a), 3)
+            text_a = '.'.join(text_a[:length])
+            label = '0'
             text_a = clean_web_text(text_a)
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
@@ -435,7 +463,8 @@ def get_processor(task_name):
         "amazon-2": AMAZON2Processor,
         "amazon-5": AMAZON5Processor,
         "sst-2": SSTProcessor,
-        "cola": CoLAProcessor
+        "cola": CoLAProcessor,
+        "wiki": WikiProcessor
     }
     processor = processors[task_name]()
     return processor

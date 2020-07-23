@@ -33,6 +33,11 @@ from augmentation import word_level_augment
 from utils import raw_data_utils
 from utils import tokenization
 
+import sys
+import csv
+
+csv.field_size_limit(sys.maxsize)
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(

@@ -24,6 +24,7 @@ import copy
 import json
 import math
 import string
+import random
 from absl import flags
 import numpy as np
 import tensorflow as tf
@@ -95,6 +96,51 @@ class UnifRep(EfficientRandomGen):
             if show_example:
                 tf.logging.info("after augment: {:s}".format(
                     filter_unicode(" ".join(tokens))))
+        return tokens
+
+    def reset_token_list(self):
+        """Generate many random tokens at the same time and cache them."""
+        self.token_list = self.vocab.keys()
+        self.token_ptr = len(self.token_list) - 1
+        np.random.shuffle(self.token_list)
+
+
+class BreakRep(EfficientRandomGen):
+    """Uniformly replace word with random words in the vocab."""
+
+    def __init__(self, token_prob, vocab):
+        self.token_min_length = token_prob
+        self.vocab_size = len(vocab)
+        self.vocab = vocab
+        self.reset_token_list()
+        self.reset_random_prob()
+
+    def __call__(self, example):
+        example.word_list_a = self.replace_tokens(example.word_list_a)
+        if example.text_b:
+            example.word_list_b = self.replace_tokens(example.word_list_b)
+        return example
+
+    def replace_tokens(self, tokens):
+        """Replace tokens randomly."""
+        if len(tokens) >= 3:
+          ratio = random.uniform(self.token_min_length, 1)
+          is_front = random.random() > 0.5
+          if is_front:
+            start, end = 0, math.ceil(ratio * len(tokens))
+          else:
+            start, end = len(tokens) - math.floor(ratio * len(tokens)), len(tokens)
+          if np.random.random() < 0.001:
+                show_example = True
+          else:
+              show_example = False
+          if show_example:
+              tf.logging.info("before augment: {:s}".format(
+                  filter_unicode(" ".join(tokens))))
+          tokens = tokens[start:end]
+          if show_example:
+              tf.logging.info("after augment: {:s}".format(
+                  filter_unicode(" ".join(tokens))))
         return tokens
 
     def reset_token_list(self):
@@ -277,17 +323,23 @@ def word_level_augment(
             token_prob = float(aug_ops.split("-")[1])
             op = UnifRep(token_prob, vocab)
             for i in range(len(examples)):
-                examples[i] = op(examples[i])
+                examples[i] = op(copy.copy(examples[i]))
         elif aug_ops.startswith("maskf"):
             tf.logging.info("\n>>Using augmentation {}".format(aug_ops))
             token_prob = float(aug_ops.split("-")[1])
             op = MaskRep(token_prob, vocab)
             for i in range(len(examples)):
-                examples[i] = op(examples[i])
+                examples[i] = op(copy.copy(examples[i]))
+        elif aug_ops.startswith("breakf"):
+            tf.logging.info("\n>>Using augmentation {}".format(aug_ops))
+            token_prob = float(aug_ops.split("-")[1])
+            op = MaskRep(token_prob, vocab)
+            for i in range(len(examples)):
+                examples[i] = op(copy.copy(examples[i]))
         elif aug_ops.startswith("tf_idf"):
             tf.logging.info("\n>>Using augmentation {}".format(aug_ops))
             token_prob = float(aug_ops.split("-")[1])
             op = TfIdfWordRep(token_prob, data_stats)
             for i in range(len(examples)):
-                examples[i] = op(examples[i])
+                examples[i] = op(copy.copy(examples[i]))
     return examples
